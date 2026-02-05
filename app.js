@@ -255,11 +255,13 @@ function toggleDetails() {
 
 function markWord(difficulty) {
     const word = appState.wordsQueue[appState.currentIndex];
+
+    // 只要做出判断，就算“学习了一个”
+    appState.todayLearned++;
     
     if (difficulty === 'easy') {
         // 标记为已掌握（记录原始索引）
         addMasteredWord(appState.currentStage, word._index);
-        appState.todayLearned++;
     } else {
         // 标记为需复习
         addHardWord(appState.currentStage, word);
@@ -428,10 +430,10 @@ function renderStats() {
         card.className = 'detail-stat-card';
         card.innerHTML = `
             <h3>${range.name}</h3>
-            <p style="font-size: 2rem; font-weight: 700; margin: 12px 0; color: #667eea;">
+            <p style="font-size: 2rem; font-weight: 800; margin: 12px 0; color: #8b7dff;">
                 ${mastered} / ${effectiveCount}${actualCount < range.count ? ` (目标${range.count})` : ''}
             </p>
-            <p style="color: #94a3b8;">
+            <p style="color: #7b6fa3;">
                 已掌握 ${effectiveCount ? ((mastered/effectiveCount)*100).toFixed(1) : 0}% · 
                 需复习 ${hard} 词
             </p>
@@ -466,7 +468,7 @@ function drawProgressChart(mastered, total) {
     // 背景圆环
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = 'rgba(123, 111, 163, 0.25)';
     ctx.lineWidth = 20;
     ctx.stroke();
     
@@ -474,7 +476,7 @@ function drawProgressChart(mastered, total) {
     const progress = mastered / total;
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-    ctx.strokeStyle = '#667eea';
+    ctx.strokeStyle = '#8b7dff';
     ctx.lineWidth = 20;
     ctx.lineCap = 'round';
     ctx.stroke();

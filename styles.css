@@ -82,6 +82,16 @@ body::before {
     z-index: -1;
 }
 
+/* 小动效：星光闪烁 */
+@keyframes twinkle {
+    0%, 100% { opacity: 0.55; filter: hue-rotate(0deg); }
+    50% { opacity: 0.9; filter: hue-rotate(10deg); }
+}
+
+body::before {
+    animation: twinkle 6s ease-in-out infinite;
+}
+
 #app {
     max-width: 1200px;
     margin: 0 auto;
@@ -313,6 +323,11 @@ body::before {
     transform: translateY(-2px);
 }
 
+.stage-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
 /* 操作按钮行 */
 .actions-row {
     display: flex;
@@ -342,6 +357,11 @@ body::before {
     background: var(--primary-gradient);
     color: #3a2f5c;
     transform: translateY(-2px);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .btn-icon {
@@ -491,12 +511,14 @@ body::before {
 }
 
 .word-text {
-    font-family: var(--font-display);
+    /* 单词本体不走像素字体：更耐看 */
+    font-family: var(--font-body);
     font-size: clamp(2.2rem, 5vw, 3.6rem);
-    font-weight: 700;
+    font-weight: 800;
     margin-bottom: 12px;
     color: var(--primary-dark);
-    text-shadow: 2px 2px 0 rgba(203, 183, 255, 0.4);
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 0 rgba(203, 183, 255, 0.25);
 }
 
 .word-phonetic {
@@ -614,6 +636,11 @@ body::before {
 .learn-btn.correct:hover {
     background: #e6fff3;
     transform: translateY(-2px);
+}
+
+.learn-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .learn-btn .btn-icon {
