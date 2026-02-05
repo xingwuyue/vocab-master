@@ -1,5 +1,22 @@
 // VocabMaster 主应用逻辑
 
+// ============ 词汇数据配置 ============
+const stageRanges = {
+    1: { start: 1, end: 1000, count: 1000, name: '高频基础' },
+    2: { start: 1001, end: 3000, count: 2000, name: '日常交流' },
+    3: { start: 3001, end: 5000, count: 2000, name: '进阶提升' },
+    4: { start: 5001, end: 8000, count: 3000, name: '中高级' },
+    5: { start: 8001, end: 10000, count: 2000, name: '精通级' }
+};
+
+function getStageVocabulary(stage) {
+    if (typeof vocabularyData !== 'undefined' && vocabularyData[stage]) {
+        return vocabularyData[stage];
+    }
+    console.error('词汇数据未加载或阶段不存在:', stage);
+    return [];
+}
+
 // ============ 全局状态 ============
 const appState = {
     currentStage: 1,
@@ -486,24 +503,6 @@ function shuffleArray(array) {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
-}
-
-// ============ 词汇数据接口 ============
-const stageRanges = {
-    1: { start: 1, end: 1000, count: 1000, name: '高频基础' },
-    2: { start: 1001, end: 3000, count: 2000, name: '日常交流' },
-    3: { start: 3001, end: 5000, count: 2000, name: '进阶提升' },
-    4: { start: 5001, end: 8000, count: 3000, name: '中高级' },
-    5: { start: 8001, end: 10000, count: 2000, name: '精通级' }
-};
-
-function getStageVocabulary(stage) {
-    // 从 vocabularyData 获取对应阶段的词汇
-    if (typeof vocabularyData !== 'undefined' && vocabularyData[stage]) {
-        return vocabularyData[stage];
-    }
-    console.error('词汇数据未加载或阶段不存在:', stage);
-    return [];
 }
 
 // ============ 键盘快捷键 ============
