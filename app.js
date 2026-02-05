@@ -531,7 +531,15 @@ function updateStageProgress() {
         const mastered = getMasteredWords(stage).length;
         const percentage = effectiveCount ? (mastered / effectiveCount) * 100 : 0;
         
-        document.getElementById(`progress-${stage}`).style.width = `${percentage}%`;
+        const fill = document.getElementById(`progress-${stage}`);
+        if (fill) {
+            // 先移除动画类，触发重绘
+            fill.classList.remove('animating');
+            void fill.offsetWidth; // 强制重绘
+            fill.style.width = `${percentage}%`;
+            // 添加动画类
+            fill.classList.add('animating');
+        }
         document.getElementById(`text-${stage}`).textContent = 
             `${mastered}/${effectiveCount}${actualCount < range.count ? ` (目标${range.count})` : ''}`;
         

@@ -92,6 +92,38 @@ body::before {
     animation: twinkle 6s ease-in-out infinite;
 }
 
+/* 游戏机 Q 弹动效 */
+@keyframes bounce-in {
+    0% { transform: scale(0.95) translateY(8px); opacity: 0.7; }
+    70% { transform: scale(1.02) translateY(-4px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes bounce-press {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+}
+
+@keyframes pixel-shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    50% { transform: translateX(2px); }
+    75% { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes card-pop {
+    0% { transform: scale(0.9) rotate(-1deg); opacity: 0.8; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes progress-glow {
+    0% { box-shadow: 0 0 0 rgba(203, 183, 255, 0); }
+    50% { box-shadow: 0 0 12px rgba(203, 183, 255, 0.6); }
+    100% { box-shadow: 0 0 0 rgba(203, 183, 255, 0); }
+}
+
 #app {
     max-width: 1200px;
     margin: 0 auto;
@@ -229,12 +261,14 @@ body::before {
     cursor: pointer;
     position: relative;
     box-shadow: var(--shadow-md);
+    animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .stage-card:hover {
     transform: translateY(-6px);
     box-shadow: var(--shadow-lg);
     border-color: var(--primary-light);
+    animation: pixel-shake 0.3s ease;
 }
 
 .stage-header {
@@ -293,8 +327,12 @@ body::before {
     height: 100%;
     background: var(--primary-gradient);
     border-radius: var(--radius-sm);
-    transition: width 0.5s ease;
+    transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     width: 0%;
+}
+
+.progress-fill.animating {
+    animation: progress-glow 0.8s ease;
 }
 
 .progress-text {
@@ -324,7 +362,7 @@ body::before {
 }
 
 .stage-btn:active {
-    transform: translateY(0);
+    animation: bounce-press 0.2s ease;
     box-shadow: none;
 }
 
@@ -360,7 +398,7 @@ body::before {
 }
 
 .action-btn:active {
-    transform: translateY(0);
+    animation: bounce-press 0.2s ease;
     box-shadow: none;
 }
 
@@ -465,6 +503,7 @@ body::before {
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
+    animation: card-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .word-header {
@@ -639,7 +678,7 @@ body::before {
 }
 
 .learn-btn:active {
-    transform: translateY(0);
+    animation: bounce-press 0.2s ease;
     box-shadow: none;
 }
 
@@ -671,6 +710,7 @@ body::before {
     padding: 36px;
     margin-bottom: 30px;
     box-shadow: var(--shadow-md);
+    animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .quiz-question {
@@ -713,6 +753,7 @@ body::before {
     background: var(--primary-gradient);
     color: #3a2f5c;
     border-color: #fff;
+    animation: pixel-shake 0.3s ease;
 }
 
 .quiz-option.correct {
