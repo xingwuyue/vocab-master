@@ -11,6 +11,7 @@ const stageRanges = {
 
 function cleanMeaning(raw) {
     if (!raw) return '暂无释义';
+
     let text = String(raw)
         .replace(/^["'“”]+|["'“”]+$/g, '')
         .replace(/\r|\n/g, ' ')
@@ -19,11 +20,22 @@ function cleanMeaning(raw) {
 
     if (!text) return '暂无释义';
 
-    // 优先抽取中文释义
-    const cnMatch = text.match(/[\u4e00-\u9fff][^;。！？\n]*/);
-    if (cnMatch) return cnMatch[0].trim();
+    // 优先抽取中文释义：取第一条更“字典级”的简洁释义
+    // ECDICT 常见分隔：\n / ; / ；
+    const cn = text
+        .split(/[;；]/)
+        .map(s => s.trim())
+        .find(s => /[\u4e00-\u9fff]/.test(s));
 
-    return text;
+    if (cn) {
+        // 再截断到第一个句号/分号前，防止太长
+        const first = cn.split(/[。！？]/)[0].trim();
+        return first || '暂无释义';
+    }
+
+    // 没有中文：保留最前面的英文释义，去掉词性前缀（n./v./adj./adv.）
+    const en = text.split(/[;。]/)[0].trim().replace(/^(n|v|adj|adv|prep|conj|pron|det)\.?\s*/i, '');
+    return en || '暂无释义';
 }
 
 function normalizeWordEntry(word, index) {
@@ -352,7 +364,7 @@ function loadReviewQuestion() {
         const btn = document.createElement('button');
         btn.className = 'quiz-option';
         btn.textContent = option;
-        btn.onclick = () => checkAnswer(option === item.meaning, item);
+        btn.onclick = () => checkAnswer(option === item.meaning, item, option);
         optionsContainer.appendChild(btn);
     });
 }
@@ -377,15 +389,16 @@ function generateQuizOptions(correctItem) {
     return shuffleArray(options);
 }
 
-function checkAnswer(isCorrect, item) {
+function checkAnswer(isCorrect, item, chosenText) {
     const options = document.querySelectorAll('.quiz-option');
     
     options.forEach(btn => {
         btn.disabled = true;
         if (btn.textContent === item.meaning) {
             btn.classList.add('correct');
-        } else if (!isCorrect && btn.textContent !== item.meaning) {
-            // 不标记错误选项
+        }
+        if (!isCorrect && chosenText && btn.textContent === chosenText && btn.textContent !== item.meaning) {
+            btn.classList.add('wrong');
         }
     });
     
