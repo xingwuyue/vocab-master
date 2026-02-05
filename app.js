@@ -5,13 +5,40 @@ const stageRanges = {
     1: { start: 1, end: 1000, count: 1000, name: '高频基础' },
     2: { start: 1001, end: 3000, count: 2000, name: '日常交流' },
     3: { start: 3001, end: 5000, count: 2000, name: '进阶提升' },
-    4: { start: 5001, end: 8000, count: 3000, name: '中高级' },
-    5: { start: 8001, end: 10000, count: 2000, name: '精通级' }
+    4: { start: 5001, end: 10000, count: 5000, name: '中高级' },
+    5: { start: 10001, end: 30000, count: 20000, name: '精通级' }
 };
+
+function cleanMeaning(raw) {
+    if (!raw) return '暂无释义';
+    let text = String(raw)
+        .replace(/^["'“”]+|["'“”]+$/g, '')
+        .replace(/\r|\n/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    if (!text) return '暂无释义';
+
+    // 优先抽取中文释义
+    const cnMatch = text.match(/[\u4e00-\u9fff][^;。！？\n]*/);
+    if (cnMatch) return cnMatch[0].trim();
+
+    return text;
+}
+
+function normalizeWordEntry(word, index) {
+    return {
+        ...word,
+        _index: index,
+        meaning: cleanMeaning(word.meaning),
+        example: word.example || '—',
+        exampleCN: word.exampleCN || '—'
+    };
+}
 
 function getStageVocabulary(stage) {
     if (typeof vocabularyData !== 'undefined' && vocabularyData[stage]) {
-        return vocabularyData[stage];
+        return vocabularyData[stage].map((word, index) => normalizeWordEntry(word, index));
     }
     console.error('词汇数据未加载或阶段不存在:', stage);
     return [];
@@ -47,10 +74,23 @@ function initApp() {
 }
 
 // ============ 数据持久化 ============
+const PROGRESS_VERSION = 2;
+
 function loadProgress() {
     const saved = localStorage.getItem('vocabMaster_progress');
     if (saved) {
         appState.userProgress = JSON.parse(saved);
+    }
+
+    const savedVersion = parseInt(localStorage.getItem('vocabMaster_progressVersion') || '1');
+    if (savedVersion < PROGRESS_VERSION) {
+        // 旧版进度索引不兼容，清理掌握列表避免误判“已学完”
+        for (let stage = 1; stage <= 5; stage++) {
+            delete appState.userProgress[`stage_${stage}_mastered`];
+        }
+        localStorage.setItem('vocabMaster_progressVersion', PROGRESS_VERSION.toString());
+        saveProgress();
+        alert('⚠️ 检测到旧版进度数据，已重置“已掌握”列表以避免误判。');
     }
     
     const today = new Date().toDateString();
@@ -66,6 +106,7 @@ function loadProgress() {
 function saveProgress() {
     localStorage.setItem('vocabMaster_progress', JSON.stringify(appState.userProgress));
     localStorage.setItem('vocabMaster_todayLearned', appState.todayLearned.toString());
+    localStorage.setItem('vocabMaster_progressVersion', PROGRESS_VERSION.toString());
 }
 
 // ============ 阶段管理 ============
@@ -76,10 +117,22 @@ function startStage(stage) {
     
     // 加载该阶段的词汇
     const allWords = getStageVocabulary(stage);
+    const targetCount = stageRanges[stage]?.count || allWords.length;
+    const actualCount = allWords.length;
+
+    if (actualCount === 0) {
+        alert('⚠️ 该阶段词库尚未加载，请稍后再试或更新词库。');
+        return;
+    }
+
+    if (actualCount < targetCount) {
+        alert(`⚠️ 当前阶段词库数量仅有 ${actualCount}，未达到目标 ${targetCount}。
+可先学习现有词库，后续再补充。`);
+    }
     
-    // 过滤掉已掌握的词汇
+    // 过滤掉已掌握的词汇（用原始索引）
     const masteredWords = getMasteredWords(stage);
-    appState.wordsQueue = allWords.filter((_, index) => !masteredWords.includes(index));
+    appState.wordsQueue = allWords.filter((word) => !masteredWords.includes(word._index));
     
     // 如果全部掌握，提示用户
     if (appState.wordsQueue.length === 0) {
@@ -204,8 +257,8 @@ function markWord(difficulty) {
     const word = appState.wordsQueue[appState.currentIndex];
     
     if (difficulty === 'easy') {
-        // 标记为已掌握
-        addMasteredWord(appState.currentStage, appState.currentIndex);
+        // 标记为已掌握（记录原始索引）
+        addMasteredWord(appState.currentStage, word._index);
         appState.todayLearned++;
     } else {
         // 标记为需复习
@@ -363,21 +416,23 @@ function renderStats() {
     
     for (let stage = 1; stage <= 5; stage++) {
         const range = stageRanges[stage];
+        const actualCount = getStageVocabulary(stage).length;
+        const effectiveCount = actualCount || range.count;
         const mastered = getMasteredWords(stage).length;
         const hard = (appState.userProgress[`stage_${stage}_hard`] || []).length;
         
         totalMastered += mastered;
-        totalWords += range.count;
+        totalWords += effectiveCount;
         
         const card = document.createElement('div');
         card.className = 'detail-stat-card';
         card.innerHTML = `
             <h3>${range.name}</h3>
             <p style="font-size: 2rem; font-weight: 700; margin: 12px 0; color: #667eea;">
-                ${mastered} / ${range.count}
+                ${mastered} / ${effectiveCount}${actualCount < range.count ? ` (目标${range.count})` : ''}
             </p>
             <p style="color: #94a3b8;">
-                已掌握 ${((mastered/range.count)*100).toFixed(1)}% · 
+                已掌握 ${effectiveCount ? ((mastered/effectiveCount)*100).toFixed(1) : 0}% · 
                 需复习 ${hard} 词
             </p>
         `;
@@ -438,31 +493,36 @@ function drawProgressChart(mastered, total) {
 // ============ 界面更新 ============
 function updateStatsOverview() {
     let totalMastered = 0;
-    let totalWords = 30000;
+    let totalWords = 0;
     
     for (let stage = 1; stage <= 5; stage++) {
         totalMastered += getMasteredWords(stage).length;
+        const range = stageRanges[stage];
+        const actualCount = getStageVocabulary(stage).length;
+        totalWords += actualCount || range.count;
     }
     
     document.getElementById('total-learned').textContent = appState.todayLearned;
     document.getElementById('total-mastered').textContent = totalMastered;
     document.getElementById('total-progress').textContent = 
-        `${((totalMastered / totalWords) * 100).toFixed(1)}%`;
+        `${totalWords ? ((totalMastered / totalWords) * 100).toFixed(1) : 0}%`;
 }
 
 function updateStageProgress() {
     for (let stage = 1; stage <= 5; stage++) {
         const range = stageRanges[stage];
+        const actualCount = getStageVocabulary(stage).length;
+        const effectiveCount = actualCount || range.count;
         const mastered = getMasteredWords(stage).length;
-        const percentage = (mastered / range.count) * 100;
+        const percentage = effectiveCount ? (mastered / effectiveCount) * 100 : 0;
         
         document.getElementById(`progress-${stage}`).style.width = `${percentage}%`;
         document.getElementById(`text-${stage}`).textContent = 
-            `${mastered}/${range.count}`;
+            `${mastered}/${effectiveCount}${actualCount < range.count ? ` (目标${range.count})` : ''}`;
         
         // 如果全部掌握，添加完成标记
         const card = document.querySelector(`[data-stage="${stage}"]`);
-        if (mastered >= range.count) {
+        if (mastered >= effectiveCount && effectiveCount > 0) {
             card.classList.add('completed');
         }
     }
