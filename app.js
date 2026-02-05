@@ -14,6 +14,11 @@ const appState = {
 
 // ============ 初始化 ============
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded fired');
+    console.log('vocabularyData exists:', typeof vocabularyData !== 'undefined');
+    if (typeof vocabularyData !== 'undefined') {
+        console.log('Stage 1 count:', vocabularyData[1]?.length);
+    }
     initApp();
 });
 
