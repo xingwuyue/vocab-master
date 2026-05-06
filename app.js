@@ -220,11 +220,11 @@ function loadWord() {
     document.getElementById('show-icon').textContent = '👁️';
     
     // 更新单词内容
-    document.getElementById('word-text').textContent = word.word;
-    document.getElementById('word-phonetic').textContent = word.phonetic;
-    document.getElementById('word-meaning').textContent = word.meaning;
-    document.getElementById('word-example').textContent = word.example;
-    document.getElementById('word-example-cn').textContent = word.exampleCN;
+    document.getElementById('word-text').textContent = word.word || '—';
+    document.getElementById('word-phonetic').textContent = word.phonetic || '';
+    document.getElementById('word-meaning').textContent = word.meaning || '暂无释义';
+    document.getElementById('word-example').textContent = word.example || '—';
+    document.getElementById('word-example-cn').textContent = word.exampleCN || '—';
     
     // 更新级别标签
     const levels = {
@@ -349,8 +349,8 @@ function loadReviewQuestion() {
     
     const item = appState.reviewQueue[appState.currentIndex];
     
-    document.getElementById('quiz-word').textContent = item.word;
-    document.getElementById('quiz-phonetic').textContent = item.phonetic;
+    document.getElementById('quiz-word').textContent = item.word || '—';
+    document.getElementById('quiz-phonetic').textContent = item.phonetic || '';
     document.getElementById('review-counter').textContent = 
         `${appState.currentIndex + 1} / ${appState.reviewQueue.length}`;
     
@@ -371,13 +371,27 @@ function loadReviewQuestion() {
 
 function generateQuizOptions(correctItem) {
     const options = [correctItem.meaning];
-    
-    // 从同阶段随机选3个干扰项
-    const stageWords = getStageVocabulary(correctItem.stage);
-    const otherMeanings = stageWords
+
+    // 从同阶段随机选干扰项，如果不足则从所有阶段补充
+    let otherMeanings = getStageVocabulary(correctItem.stage)
         .filter(w => w.meaning !== correctItem.meaning)
         .map(w => w.meaning);
-    
+
+    // 如果同阶段释义不足，从其他阶段补充
+    if (otherMeanings.length < 3) {
+        for (let stage = 1; stage <= 5; stage++) {
+            if (stage === correctItem.stage) continue;
+            const extra = getStageVocabulary(stage)
+                .filter(w => w.meaning !== correctItem.meaning && !otherMeanings.includes(w.meaning))
+                .map(w => w.meaning);
+            otherMeanings = otherMeanings.concat(extra);
+            if (otherMeanings.length >= 10) break;
+        }
+    }
+
+    // 去重
+    otherMeanings = [...new Set(otherMeanings)];
+
     while (options.length < 4 && otherMeanings.length > 0) {
         const randomIndex = Math.floor(Math.random() * otherMeanings.length);
         const meaning = otherMeanings.splice(randomIndex, 1)[0];
@@ -385,7 +399,12 @@ function generateQuizOptions(correctItem) {
             options.push(meaning);
         }
     }
-    
+
+    // 如果仍然不足 4 个选项，用占位符填充
+    while (options.length < 4) {
+        options.push('暂无释义');
+    }
+
     return shuffleArray(options);
 }
 
@@ -485,14 +504,16 @@ function drawProgressChart(mastered, total) {
     ctx.lineWidth = 20;
     ctx.stroke();
     
-    // 进度圆环
-    const progress = mastered / total;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
-    ctx.strokeStyle = '#8b7dff';
-    ctx.lineWidth = 20;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    // 进度圆环（防止除零错误）
+    const progress = total > 0 ? mastered / total : 0;
+    if (progress > 0) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        ctx.strokeStyle = '#8b7dff';
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
     
     // 中心文字
     ctx.fillStyle = '#f8fafc';
@@ -568,13 +589,20 @@ function resetProgress() {
         localStorage.removeItem('vocabMaster_progress');
         localStorage.removeItem('vocabMaster_todayLearned');
         localStorage.removeItem('vocabMaster_lastDate');
-        
+        localStorage.removeItem('vocabMaster_progressVersion');
+
         appState.userProgress = {};
         appState.todayLearned = 0;
-        
+
         updateStatsOverview();
         updateStageProgress();
-        
+
+        // 移除所有阶段的完成标记
+        for (let stage = 1; stage <= 5; stage++) {
+            const card = document.querySelector(`[data-stage="${stage}"]`);
+            if (card) card.classList.remove('completed');
+        }
+
         alert('进度已重置，重新开始学习吧！');
     }
 }
@@ -591,11 +619,13 @@ function shuffleArray(array) {
 // ============ 键盘快捷键 ============
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        // 只在学习界面生效
-        if (!document.getElementById('learn-screen').classList.contains('active')) {
+        // 只在学习界面生效，排除复习界面
+        const learnScreen = document.getElementById('learn-screen');
+        const reviewScreen = document.getElementById('review-screen');
+        if (!learnScreen.classList.contains('active') || reviewScreen.classList.contains('active')) {
             return;
         }
-        
+
         switch(e.code) {
             case 'Space':
                 e.preventDefault();
